@@ -1,0 +1,15 @@
+S:\Maxim\programs\DataProcessing\DataProcessing\bin\Debug\DataProcessing.exe.config
+S:\Maxim\programs\DataProcessing\DataProcessing\obj\Debug\DataProcessing.csprojResolveAssemblyReference.cache
+S:\Maxim\programs\DataProcessing\DataProcessing\obj\Debug\DataProcessing.Properties.Resources.resources
+S:\Maxim\programs\DataProcessing\DataProcessing\obj\Debug\DataProcessing.csproj.GenerateResource.Cache
+S:\Maxim\programs\DataProcessing\DataProcessing\bin\Debug\DataProcessing.exe
+S:\Maxim\programs\DataProcessing\DataProcessing\bin\Debug\DataProcessing.pdb
+S:\Maxim\programs\DataProcessing\DataProcessing\obj\Debug\DataProcessing.MainForm.resources
+S:\Maxim\programs\DataProcessing\DataProcessing\obj\Debug\DataProcessing.SettingsForm.resources
+S:\Maxim\programs\DataProcessing\DataProcessing\obj\Debug\DataProcessing.TtestForm.resources
+S:\Maxim\programs\DataProcessing\DataProcessing\obj\Debug\DataProcessing.exe
+S:\Maxim\programs\DataProcessing\DataProcessing\obj\Debug\DataProcessing.pdb
+S:\Maxim\programs\DataProcessing\DataProcessing\obj\Debug\DataProcessing.GenerateForm.resources
+S:\Maxim\programs\DataProcessing\DataProcessing\obj\Debug\DataProcessing.GenerateMultiDimForm.resources
+S:\Maxim\programs\DataProcessing\DataProcessing\obj\Debug\DataProcessing.CheckSelParamForm.resources
+S:\Maxim\programs\DataProcessing\DataProcessing\obj\Debug\DataProcessing.DrawMultiDimForm.resources
