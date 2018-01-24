@@ -817,6 +817,21 @@ namespace DataProcessing {
 			}
 		}
 
+
+		private void IndepCoord2DToolStripMenuItem_Click(object sender, EventArgs e) {
+			double[][] new_arr = new double[2][];
+			new_arr[0] = new double[N2d];
+			new_arr[1] = new double[N2d];
+			double fi = 0.5*Math.Atan((ev2d.COR*ev2d.MQD_X*ev2d.MQD_Y) / (Math.Pow(ev2d.MQD_X,2) - Math.Pow(ev2d.MQD_X, 2)));
+			for(int i = 0; i < N2d; i++) {
+				new_arr[0][i] = arr[0][i]*Math.Cos(fi) + arr[1][i] * Math.Sin(fi);
+				new_arr[1][i] = -arr[0][i] * Math.Sin(fi) + arr[1][i] * Math.Cos(fi);
+			}
+			arrs2d.Add("V" + v_count2d, new_arr);
+			Tree2D.Nodes.Add("V" + v_count2d, "V" + v_count2d);
+			v_count2d++;
+		}
+
 		#endregion
 
 		#region CorFieldCM
@@ -913,6 +928,7 @@ namespace DataProcessing {
 			}
 			MakeCorField();
 		}
+
 		#endregion
 
 		#endregion
@@ -1198,7 +1214,7 @@ namespace DataProcessing {
 					x = minx + i * step_;
 					double FI1 = x - ev2d.MID_X,
 					FI2 = Math.Pow(x, 2) - (ev2d.MID_X_CUBE - ev2d.MID_X_QUAD * ev2d.MID_X) * (x - ev2d.MID_X) / Math.Pow(ev2d.MQD_X, 2) - ev2d.MID_X_QUAD;
-					double Syx = Math.Sqrt((S_rem / N2d) * (1 + Math.Pow(FI1 / ev2d.MQD_X, 2) + Math.Pow(FI2, 2) / ev2d.MID_X_QUAD));
+					double Syx = Math.Sqrt((S_rem / N2d) * (1 + Math.Pow(FI1 / ev2d.MQD_X, 2) + Math.Pow(FI2, 2) / ev2d.MID_FI2_QUAD));
 					y = cr.Value * FI2 + br.Value * FI1 + ar.Value;
 					corf_ch.Series["interv_min"].Points.AddXY(x, y - t * Syx);
 				}
@@ -1211,7 +1227,7 @@ namespace DataProcessing {
 					x = minx + i * step_;
 					double FI1 = x - ev2d.MID_X,
 					FI2 = Math.Pow(x, 2) - (ev2d.MID_X_CUBE - ev2d.MID_X_QUAD * ev2d.MID_X) * (x - ev2d.MID_X) / Math.Pow(ev2d.MQD_X, 2) - ev2d.MID_X_QUAD;
-					double Syx = Math.Sqrt((S_rem / N2d) * (1 + Math.Pow(FI1 / ev2d.MQD_X, 2) + Math.Pow(FI2, 2) / ev2d.MID_X_QUAD));
+					double Syx = Math.Sqrt((S_rem / N2d) * (1 + Math.Pow(FI1 / ev2d.MQD_X, 2) + Math.Pow(FI2, 2) / ev2d.MID_FI2_QUAD));
 					y = cr.Value * FI2 + br.Value * FI1 + ar.Value;
 					corf_ch.Series["interv_max"].Points.AddXY(x, y + t * Syx);
 					//MessageBox.Show(x + " " + (y + t * S_rem));
@@ -1545,8 +1561,9 @@ namespace DataProcessing {
 		Dictionary<string, double[][]> arrsNd = null;
 		double v_countNd = 0;
 		static public int Nnd, dim;
-		EvalND evnd;
+		static EvalND evnd;
 		List<int> Cpart = null;
+        List<List<double[]>> Clusters;
 		#endregion
 
 		#region Контекстные меню
@@ -1672,8 +1689,11 @@ namespace DataProcessing {
 					regr_i.Items.Add(i);
 				}
 				ir = -1;
+                Clusters = null;
+                FactorAnalysis();
 			}
 		}
+
 		private void TreeND_Standartize_Click(object sender, EventArgs e) {
 			/*if (arr == null)
 				return;
@@ -1734,6 +1754,78 @@ namespace DataProcessing {
 				arrsNd.Remove(name);
 			}
 		}
+
+		private void IndepCoord3DToolStripMenuItem1_Click(object sender, EventArgs e) {
+			double[][] new_arr = new double[dim][], vecs = new double[dim][], DCmat = new double[dim][];
+			for(int i = 0; i < dim; i++) {
+				new_arr[i] = new double[Nnd];
+				vecs[i] = new double[dim];
+				DCmat[i] = new double[dim];
+
+				for(int j = 0; j < dim; j++) {
+					if (i == j)
+						vecs[i][j] = 1;
+					else
+						vecs[i][j] = 0;
+					DCmat[i][j] = evnd.DCmat[i,j];
+				}
+			}
+			string str = "";
+			Matrix.OwnVectors(DCmat, vecs);
+			for (int i = 0; i < dim; i++) {
+				for (int j = 0; j < dim; j++) {
+					str += vecs[i][j] + " ";
+				}
+				str += "\n";
+			}
+			for(int i = 0; i < Nnd; i++) {
+				for(int j = 0; j < dim; j++) {
+					double sum = 0;
+					for(int k = 0; k < dim; k++) {
+						sum += vecs[j][k] * arr[k][i];
+					}
+					new_arr[j][i] = sum;
+				}
+			}
+			arrsNd.Add("V" + v_countNd, new_arr);
+			TreeND.Nodes.Add("V" + v_countNd, "V" + v_countNd);
+			v_countNd++;
+		}
+
+
+		private void reduceDimensionToolStripMenuItem_Click(object sender, EventArgs e) {
+			List<double[]> new_arr = new List<double[]>();
+			for(int i = 0; i < dim; i++) {
+				new_arr.Add(new double[Nnd]);
+				for(int j = 0; j < Nnd; j++) {
+					new_arr[i][j] = arr[i][j];
+				}
+			}
+			new ReduceDimForm(new_arr).ShowDialog();
+			double[][] temp = new double[new_arr.Count][];
+			for (int i = 0; i < new_arr.Count; i++) {
+				temp[i] = new double[Nnd];
+				for (int j = 0; j < Nnd; j++) {
+					temp[i][j] = arr[i][j];
+				}
+			}
+			arrsNd.Add("V" + v_countNd, temp);
+			TreeND.Nodes.Add("V" + v_countNd, "V" + v_countNd);
+			v_countNd++;
+		}
+
+		private void to2DimToolStripMenuItem_Click(object sender, EventArgs e) {
+			if(arr.Length != 2) {
+				MessageBox.Show("Вибірка не 2-вимірна");
+				return;
+			}
+			if (arrs2d == null)
+				arrs2d = new Dictionary<string, double[][]>();
+			arrs2d.Add("V" + v_count2d, arr);
+			Tree2D.Nodes.Add("V" + v_count2d, "V" + v_count2d);
+			v_count2d++;
+		}
+
 
 		#endregion
 
@@ -1844,12 +1936,577 @@ namespace DataProcessing {
 		}
 
 
-		#endregion
+        #endregion
 
-		#region Визуализация
+        #region Факторный анализ
+
+        void FactorAnalysis() {
+            double[][] temp = new double[dim][], ownVectors = new double[dim][];
+            for (int i = 0; i < dim; i++) {
+                temp[i] = new double[dim];
+                ownVectors[i] = new double[dim];
+                for (int j = 0; j < dim; j++) {
+                    temp[i][j] = evnd.DCmat[i, j];
+                    if (i == j)
+                        ownVectors[i][j] = 1;
+                    else
+                        ownVectors[i][j] = 0;
+                }
+            }
+            Matrix.OwnVectors(temp, ownVectors);
+            double[] zagalMaxCor = new double[dim], zagalMGK = new double[dim], zagalUser = new double[dim], zagalAver = new double[dim];
+            for (int i = 0; i < dim; i++) {
+                double max = double.MinValue;
+                for (int j = 0; j < dim; j++) {
+                    if (i != j) {
+                        if (evnd.DCmat[i, j] > max)
+                            max = evnd.DCmat[i, j];
+                    }
+                }
+                zagalMaxCor[i] = max;
+                zagalMGK[i] = 0;
+                zagalUser[i] = 0;
+                double ZAsum1 = 0, ZAsum2 = 0;
+                for (int j = 0; j < dim; j++) {
+                    zagalMGK[i] += Math.Pow(ownVectors[i][j], 2);
+                    zagalUser[i] += evnd.DCmat[i, j];
+                    ZAsum1 += Math.Abs(evnd.DCmat[i, j]);
+                    for (int k = 0; k < dim; k++) {
+                        ZAsum2 += Math.Abs(evnd.DCmat[j, k]);
+                    }
+                }
+                zagalAver[i] = dim * Math.Pow(ZAsum1, 2) / ((dim - 1) * ZAsum2);
+                zagalUser[i] /= dim;
+
+            }
+            List<double[]> zagalArr = new List<double[]>();
+            zagalArr.Add(zagalAver);
+            zagalArr.Add(zagalMaxCor);
+            zagalArr.Add(zagalMGK);
+            zagalArr.Add(zagalUser);
+            double f_min = double.MaxValue;
+            double[][] Rh = null;
+            double[][] A = ownVectors, A_prev;
+            double[] ownNumbers = new double[dim];
+            foreach (double[] zagal in zagalArr) {
+                double[][] rh = new double[dim][];
+                for (int i = 0; i < dim; i++) {
+                    rh[i] = new double[dim];
+                    temp[i] = new double[dim];
+                    for (int j = 0; j < dim; j++) {
+                        if (i == j) {
+                            rh[i][j] = zagal[i];
+                        }
+                        else {
+                            rh[i][j] = evnd.DCmat[i, j];
+                        }
+                        temp[i][j] = rh[i][j];
+                    }
+                }
+                double f_ = FacAn_f(temp, A);
+                for (int i = 0; i < temp.Length; i++) {
+                    ownNumbers[i] = temp[i][i];
+                }
+                if (f_ < f_min) {
+                    f_min = f_;
+                    Rh = rh;
+                }
+            }
+            double f_prev = f_min, f = 0;
+            A_prev = new double[A.Length][];
+            for(int i = 0; i < A.Length; i++) {
+                A_prev[i] = new double[A[i].Length];
+                for(int j = 0; j < A[i].Length; j++) {
+                    A_prev[i][j] = A[i][j];
+                }
+            }
+            while (true) {
+                zagalMaxCor = new double[dim];
+                zagalMGK = new double[dim];
+                zagalUser = new double[dim];
+                zagalAver = new double[dim];
+                for (int i = 0; i < dim; i++) {
+                    double max = double.MinValue;
+                    for (int j = 0; j < dim; j++) {
+                        if (i != j) {
+                            if (Rh[i][j] > max)
+                                max = Rh[i][j];
+                        }
+                    }
+                    zagalMaxCor[i] = max;
+                    zagalMGK[i] = 0;
+                    zagalUser[i] = 0;
+                    double ZAsum1 = 0, ZAsum2 = 0;
+                    for (int j = 0; j < dim; j++) {
+                        zagalMGK[i] += Math.Pow(ownVectors[i][j], 2);
+                        zagalUser[i] += Rh[i][j];
+                        ZAsum1 += Math.Abs(Rh[i][j]);
+                        for (int k = 0; k < dim; k++) {
+                            ZAsum2 += Math.Abs(evnd.DCmat[j, k]);
+                        }
+                    }
+                    zagalAver[i] = dim * Math.Pow(ZAsum1, 2) / ((dim - 1) * ZAsum2);
+                    zagalUser[i] /= dim;
+
+                }
+                zagalArr = new List<double[]>();
+                zagalArr.Add(zagalAver);
+                zagalArr.Add(zagalMaxCor);
+                zagalArr.Add(zagalMGK);
+                zagalArr.Add(zagalUser);
+                f_min = double.MaxValue;
+                foreach (double[] zagal in zagalArr) {
+                    double[][] rh = new double[dim][];
+                    temp = new double[dim][];
+                    ownNumbers = new double[dim];
+                    for (int i = 0; i < dim; i++) {
+                        rh[i] = new double[dim];
+                        temp[i] = new double[dim];
+                        for (int j = 0; j < dim; j++) {
+                            if (i == j) {
+                                rh[i][j] = zagal[i];
+                            }
+                            else {
+                                rh[i][j] = Rh[i][j];
+                            }
+                            temp[i][j] = rh[i][j];
+                        }
+                    }
+                    f = FacAn_f(temp, A);
+                    for(int i = 0; i < temp.Length; i++) {
+                        ownNumbers[i] = temp[i][i];
+                    }
+                    if (f < f_min) {
+                        f_min = f;
+                        Rh = rh;
+                    }
+                }
+                if(f >= f_prev) {
+                    break;
+                }
+                for(int i = 0; i < Rh.Length; i++) {
+                    if (Rh[i][i] > 1)
+                        break;
+                }
+                double difA = 0;
+                for(int i = 0; i < A.Length; i++) {
+                    for(int j = 0; j < A[i].Length; j++) {
+                        difA += Math.Pow(A[i][j] - A_prev[i][j], 2);
+                    }
+                }
+                if(difA < set.factorEps) {
+                    break;
+                }
+                for (int i = 0; i < A.Length; i++) {
+                    A_prev[i] = new double[A[i].Length];
+                    for (int j = 0; j < A[i].Length; j++) {
+                        A_prev[i][j] = A[i][j];
+                    }
+                }
+            }
+            List<double[]> factors = new List<double[]>();
+            for(int i = 0; i < Rh.Length; i++) {
+                if(ownNumbers[i] > 1) {
+                    factors.Add(A[i]);
+                }
+            }
+            if(factors.Count == 0) {
+                return;
+            }
+            fac_table.Columns.Clear();
+            fac_table.Rows.Clear();
+            for(int i = 0; i < factors.Count; i++) {
+                fac_table.Columns.Add("F" + (i + 1), "F" + (i + 1));
+            }
+            fac_table.Rows.Add(dim);
+            for (int i = 0; i < dim; i++) {
+                fac_table.Rows[i].HeaderCell.Value = "X" + (i + 1);
+            }
+            for(int i = 0; i < factors.Count; i++) {
+                for(int j = 0; j < dim; j++) {
+                    fac_table[i, j].Value = Math.Round(factors[i][j], 7);
+                }
+            }
+        }
+
+        double FacAn_f(double[][] Rh, double[][] A) {
+            
+            double[][] AAT = Matrix.Multiply(A, Matrix.Transposition(A));
+            Matrix.MultiplyNumber(AAT, -1);
+            double[][] Rzal = Matrix.Add(Rh, AAT);
+            double sum = 0;
+            for(int i = 0; i < Rzal.Length; i++) {
+                for(int j = 0; j < Rzal[i].Length; j++) {
+                    if (i != j)
+                        sum += Math.Pow(Rzal[i][j], 2);
+                }
+            }
+            return sum;
+        }
+
+        #endregion
+
+        #region Кластерный анализ
 
 
-		private void DiagMatrixMenuItem_Click(object sender, EventArgs e) {
+        private void агломеративнийМетодToolStripMenuItem_Click(object sender, EventArgs e) {
+            List<List<double>> D = new List<List<double>>();
+            Clusters = new List<List<double[]>>();
+            for (int i = 0; i < Nnd; i++) {
+                D.Add(new List<double>());
+                double[] p1 = new double[dim], p2 = new double[dim];
+                for (int k = 0; k < dim; k++)
+                    p1[k] = arr[k][i];
+                List<double[]> temp = new List<double[]>();
+                temp.Add(p1);
+                Clusters.Add(temp);
+                for (int j = 0; j < Nnd; j++) {
+                    p2 = new double[dim];
+                    for (int k = 0; k < dim; k++)
+                        p2[k] = arr[k][j];
+                    D[i].Add(set.distF(p1, p2));
+                }
+            }
+
+            while (Clusters.Count > set.clustNum) {
+                /*string str = "";
+                for (int i = 0; i < D.Count; i++) {
+                    for (int j = 0; j < D[i].Count; j++) {
+                        str += Math.Round(D[i][j], 4) + " ";
+                    }
+                    str += "\n";
+                }
+                MessageBox.Show(str);*/
+                int indexI = -1, indexJ = -1;
+                double min = double.MaxValue;
+                for (int i = 0; i < D.Count; i++) {
+                    for (int j = 0; j < D[i].Count; j++) {
+                        if (D[i][j] < min && D[i][j] > 0 && i != j) {
+                            min = D[i][j];
+                            indexI = i;
+                            indexJ = j;
+                        }
+                    }
+                }
+                //MessageBox.Show(D.Count + " " +D[D.Count - 1].Count + " " + indexI + " " + indexJ + " " + min);
+
+                List<double> new_dist = new List<double>();
+                for (int i = 0; i < Clusters.Count; i++) {
+                    if (i == indexI || i == indexJ)
+                        continue;
+                    double[] coef = LanceWilliams(indexI, indexJ, i);
+                    //MessageBox.Show(Clusters.Count + " " + indexI + " " + indexJ + " " + i);
+                    new_dist.Add(coef[0] * set.cldistF(Clusters[indexI], Clusters[i]) +
+                                  coef[1] * set.cldistF(Clusters[indexJ], Clusters[i]) +
+                                  coef[2] * set.cldistF(Clusters[indexI], Clusters[indexJ]) +
+                                  coef[3] * Math.Abs(set.cldistF(Clusters[indexI], Clusters[i]) - set.cldistF(Clusters[indexJ], Clusters[i])));
+                }
+                new_dist.Add(0);
+                int max_ind = 0, min_ind = 0;
+                if (indexI > indexJ) {
+                    max_ind = indexI;
+                    min_ind = indexJ;
+                }
+                else {
+                    max_ind = indexJ;
+                    min_ind = indexI;
+                }
+                //MessageBox.Show(max_ind + " " + min_ind + " " + D.Count);
+                D.RemoveAt(max_ind);
+                D.RemoveAt(min_ind);
+                for (int i = 0; i < D.Count; i++) {
+                    D[i].RemoveAt(max_ind);
+                    D[i].RemoveAt(min_ind);
+                }
+                List<double[]> new_cluster = new List<double[]>();
+                for (int i = 0; i < Clusters[indexI].Count; i++) {
+                    new_cluster.Add(Clusters[indexI][i]);
+                }
+                for (int i = 0; i < Clusters[indexJ].Count; i++) {
+                    new_cluster.Add(Clusters[indexJ][i]);
+                }
+                Clusters.RemoveAt(max_ind);
+                Clusters.RemoveAt(min_ind);
+                Clusters.Add(new_cluster);
+                //MessageBox.Show(D.Count + " " + new_dist.Count);
+                D.Add(new_dist);
+                for (int i = 0; i < D.Count - 1; i++) {
+                    D[i].Add(new_dist[i]);
+                }
+            }
+            double Q1 = 0;
+            double[] X_c;
+
+            for (int j = 0; j < Clusters.Count; j++) {
+                X_c = new double[dim];
+                double sum1 = 0;
+                for (int k = 0; k < dim; k++) {
+                    for (int l = 0; l < Clusters[j].Count; l++)
+                        sum1 += Clusters[j][l][k];
+                    X_c[k] = sum1 / Clusters[j].Count;
+                }
+                for (int l = 0; l < Clusters[j].Count; l++)
+                    Q1 += Math.Pow(set.distF(Clusters[j][l], X_c), 2);
+            }
+
+            double Q2 = 0;
+            for (int j = 0; j < Clusters.Count; j++) {
+                for (int l = 0; l < Clusters[j].Count - 1; l++) {
+                    for (int h = l + 1; h < Clusters[j].Count; h++) {
+                        Q2 += set.distF(Clusters[j][l], Clusters[j][h]);
+                    }
+                }
+            }
+            double Q3 = 1;
+            foreach (List<double[]> Cluster in Clusters) {
+                double[][] V = new double[dim][];
+                for (int k = 0; k < dim; k++) {
+                    double Xk = 0, Xp = 0;
+                    V[k] = new double[dim];
+                    for (int t = 0; t < Cluster.Count; t++) {
+                        Xk += Cluster[t][k];
+                    }
+                    Xk /= Cluster.Count;
+                    for (int p = 0; p < dim; p++) {
+                        for (int t = 0; t < Cluster.Count; t++) {
+                            Xp += Cluster[t][p];
+                        }
+                        Xp /= Cluster.Count;
+                        V[k][p] = 0;
+                        for (int l = 0; l < Cluster.Count; l++) {
+                            V[k][p] += (Cluster[l][k] - Xk) * (Cluster[l][p] - Xp);
+                        }
+                    }
+                }
+                Q3 *= Matrix.DetCount(V);
+            }
+            double Q4 = 0, Q4_ = 0, Q4__ = 0, t1 = 0, t2 = 1;
+            foreach (List<double[]> Cluster in Clusters) {
+                t1 += Cluster.Count * (Cluster.Count - 1) / 2;
+                t2 *= Cluster.Count;
+                for (int l = 0; l < Cluster.Count - 1; l++) {
+                    for (int h = l + 1; h < Cluster.Count; h++) {
+                        Q4_ += set.distF(Cluster[l], Cluster[h]);
+                    }
+                }
+            }
+            for (int j = 0; j < Clusters.Count - 1; j++) {
+                List<double[]> Cluster = Clusters[j];
+                for (int l = 0; l < Cluster.Count; l++) {
+                    for (int m = j + 1; m < Clusters.Count; m++) {
+                        List<double[]> Cluster1 = Clusters[m];
+                        for (int h = 0; h < Cluster1.Count; h++) {
+                            Q4__ += set.distF(Cluster[l], Cluster1[h]);
+                        }
+                    }
+                }
+            }
+            Q4_ /= t1;
+            Q4__ /= t2;
+            Q4 = Q4_ / Q4__;
+            clust_table.Rows.Clear();
+            clust_table.Rows.Add(4);
+            for(int i = 0; i < 4; i++) {
+                clust_table.Rows[i].HeaderCell.Value = "Q" + (i + 1);
+            }
+            clust_table[0, 0].Value = Q1;
+            clust_table[0, 1].Value = Q2;
+            clust_table[0, 2].Value = Q3;
+            clust_table[0, 3].Value = Q4;
+
+        }
+
+        private void методКСередніхToolStripMenuItem_Click(object sender, EventArgs e) {
+            List<int> c = new List<int>();
+            Random r = new Random();
+            for(int i = 0; i < set.clustNum; i++) {
+                int rand;
+                while(c.IndexOf(rand = r.Next(0, Nnd))!=-1);
+                c.Add(rand);
+            }
+            double[][] points = Matrix.Transposition(arr);
+            List<double[]> center = new List<double[]>();
+            for (int i = 0; i < set.clustNum; i++) {
+                center.Add(points[c[i]]);
+            }
+            int count = 1;
+            while (true) {
+                List<double[]> center_prev = center;
+                Clusters = new List<List<double[]>>();
+                for (int i = 0; i < set.clustNum; i++) {
+                    List<double[]> temp = new List<double[]>();
+                    temp.Add(center[i]);
+                    Clusters.Add(temp);
+                }
+                for (int i = 0; i < Nnd; i++) {
+                    double min = double.MaxValue;
+                    int index = -1;
+                    for(int j = 0; j < set.clustNum; j++) {
+                        double dist = set.distF(center[j], points[i]);
+                        if (dist < min) {
+                            min = dist;
+                            index = j;
+                        }
+                    }
+                    Clusters[index].Add(points[i]);
+                }
+                center = new List<double[]>();
+                for (int i = 0; i < Clusters.Count; i++) {
+                    double[] sum = new double[dim];
+                    for (int j = 0; j < dim; j++)
+                        sum[j] = 0;
+                    for (int j = 0; j < Clusters[i].Count; j++)  {
+                        for (int k = 0; k < dim; k++) {
+                            sum[k] += Clusters[i][j][k];
+                        }
+                    }
+                    for (int j = 0; j < dim; j++) {
+                        if (Clusters[i].Count != 0)
+                            sum[j] /= Clusters[i].Count;
+                    }
+                    center.Add(sum);
+                }
+                if(count >= set.clustIter) {
+                    break;
+                }
+                bool exit = true;
+                for(int i = 0; i < center.Count; i++) {
+                    for(int j = 0; j < dim; j++) {
+                        if((center[i][j] - center_prev[i][j]) > set.clustEps) {
+                            exit = false;
+                            break;
+                        }
+                    }
+                }
+                if (exit) {
+                    break;
+                }
+                count++;
+            }
+            double Q1 = 0;
+            double[] X_c;
+
+            for (int j = 0; j < Clusters.Count; j++) {
+                X_c = new double[dim];
+                double sum1 = 0;
+                for (int k = 0; k < dim; k++) {
+                    for (int l = 0; l < Clusters[j].Count; l++)
+                        sum1 += Clusters[j][l][k];
+                    X_c[k] = sum1 / Clusters[j].Count;
+                }
+                for (int l = 0; l < Clusters[j].Count; l++)
+                    Q1 += Math.Pow(set.distF(Clusters[j][l], X_c), 2);
+            }
+
+            double Q2 = 0;
+            for (int j = 0; j < Clusters.Count; j++) {
+                for (int l = 0; l < Clusters[j].Count - 1; l++) {
+                    for (int h = l + 1; h < Clusters[j].Count; h++) {
+                        Q2 += set.distF(Clusters[j][l], Clusters[j][h]);
+                    }
+                }
+            }
+            double Q3 = 1;
+            foreach (List<double[]> Cluster in Clusters) {
+                double[][] V = new double[dim][];
+                for (int k = 0; k < dim; k++) {
+                    double Xk = 0, Xp = 0;
+                    V[k] = new double[dim];
+                    for (int t = 0; t < Cluster.Count; t++) {
+                        Xk += Cluster[t][k];
+                    }
+                    Xk /= Cluster.Count;
+                    for (int p = 0; p < dim; p++) {
+                        for (int t = 0; t < Cluster.Count; t++) {
+                            Xp += Cluster[t][p];
+                        }
+                        Xp /= Cluster.Count;
+                        V[k][p] = 0;
+                        for (int l = 0; l < Cluster.Count; l++) {
+                            V[k][p] += (Cluster[l][k] - Xk) * (Cluster[l][p] - Xp);
+                        }
+                    }
+                }
+                Q3 *= Matrix.DetCount(V);
+            }
+            double Q4 = 0, Q4_ = 0, Q4__ = 0, t1 = 0, t2 = 1;
+            foreach (List<double[]> Cluster in Clusters) {
+                t1 += Cluster.Count * (Cluster.Count - 1) / 2;
+                t2 *= Cluster.Count;
+                for (int l = 0; l < Cluster.Count - 1; l++) {
+                    for (int h = l + 1; h < Cluster.Count; h++) {
+                        Q4_ += set.distF(Cluster[l], Cluster[h]);
+                    }
+                }
+            }
+            for (int j = 0; j < Clusters.Count - 1; j++) {
+                List<double[]> Cluster = Clusters[j];
+                for (int l = 0; l < Cluster.Count; l++) {
+                    for (int m = j + 1; m < Clusters.Count; m++) {
+                        List<double[]> Cluster1 = Clusters[m];
+                        for (int h = 0; h < Cluster1.Count; h++) {
+                            Q4__ += set.distF(Cluster[l], Cluster1[h]);
+                        }
+                    }
+                }
+            }
+            Q4_ /= t1;
+            Q4__ /= t2;
+            Q4 = Q4_ / Q4__;
+            clust_table.Rows.Clear();
+            clust_table.Rows.Add(4);
+            for (int i = 0; i < 4; i++) {
+                clust_table.Rows[i].HeaderCell.Value = "Q" + (i + 1);
+            }
+            clust_table[0, 0].Value = Q1;
+            clust_table[0, 1].Value = Q2;
+            clust_table[0, 2].Value = Q3;
+            clust_table[0, 3].Value = Q4;
+        }
+
+        public double[] LanceWilliams(int m, int l, int h) {
+            if(set.cldistF == NearNeighbor) {
+                return new double[] { 0.5, 0.5, 0, -0.5 };
+            }
+            else if(set.cldistF == FarNeighbor) {
+                return new double[] { 0.5, 0.5, 0, 0.5 };
+            }
+            else if (set.cldistF == MidWeight) {
+                double Nl = Clusters[l].Count, Nh = Clusters[h].Count;
+                return new double[] { Nl / (Nl + Nh), Nh / (Nl + Nh), 0, 0 };
+            }
+            else if (set.cldistF == MidNonWeight) {
+                return new double[] { 0.5, 0.5, 0, 0 };
+            }
+            else if (set.cldistF == Median) {
+                return new double[] { 0.5, 0.5, -0.25, 0 };
+            }
+            else if (set.cldistF == Center) {
+                double Nl = Clusters[l].Count, Nh = Clusters[h].Count;
+                return new double[] { Nl / (Nl + Nh), Nh / (Nl + Nh), -Nl * Nh / Math.Pow(Nl + Nh, 2), 0 };
+            }
+            else if (set.cldistF == Word) {
+                double Nl = Clusters[l].Count, Nh = Clusters[h].Count, Nm = Clusters[m].Count;
+                return new double[] { (Nm + Nl)/ (Nm + Nl + Nh), (Nm + Nh) / (Nm + Nl + Nh), Nm / (Nm + Nl + Nh), 0 };
+            }
+            return null;
+        }
+
+
+        private void візуалізаціяToolStripMenuItem_Click(object sender, EventArgs e) {
+            if(Clusters == null) {
+                MessageBox.Show("Не проведено кластерний аналіз");
+                return;
+            }
+            new ClusterVisualizationForm(Clusters).ShowDialog();
+        }
+
+        #endregion
+
+        #region Визуализация
+
+
+        private void DiagMatrixMenuItem_Click(object sender, EventArgs e) {
 			if (arr == null || Nnd == 0)
 				return;
 			new DrawMultiDimForm(0).ShowDialog();
@@ -1900,7 +2557,7 @@ namespace DataProcessing {
 				x_[i] = new double[Nnd];
 				for (int j = 0; j < Nnd; j++) {
 					x_mult[i][j] = arr[i+1][j];
-					x_[i][j] = arr[i+1][j] - evnd.MID[i];
+					x_[i][j] = arr[i+1][j] - evnd.MID[i+1];
 				}
 			}
 			for (int i = 0; i < Nnd; i++) {
@@ -1937,7 +2594,7 @@ namespace DataProcessing {
 					continue;
 				}
 				a_check.Items.Add(i + 1);
-				a0 -= evnd.MID[i] * a_mult[i_];
+				a0 -= evnd.MID[i_] * a_mult[i_];
 			}
 			DetCoef = Math.Pow(ManyCor(ir), 2);
 			R_.Text = DetCoef.ToString();
@@ -2001,7 +2658,7 @@ namespace DataProcessing {
 		private void emp_line_check_Click(object sender, EventArgs e) {
 			double xa = Matrix.Multiply(x_mult, Matrix.Transposition(new double[][] { a_mult }))[0][0],
 				xcx = Matrix.Multiply(x_mult, Matrix.Multiply(Ckk, Matrix.Transposition(x_mult)))[0][0];
-			double t = xa - evnd.MID[ir], crit = crit_ttest(Nnd - dim);
+			double t = (xa - evnd.MID[ir])/(S_rem*Math.Sqrt(Math.Abs(1+xcx))), crit = crit_ttest(Nnd - dim);
 			string s = Math.Abs(t) <= crit ? "пройдений" : "не пройдений";
 			MessageBox.Show("t = " + Math.Round(t, 4) + "\nКритичне значення " + Math.Round(crit, 4) + "\nКритерій " + s);
 		}
@@ -2217,7 +2874,8 @@ namespace DataProcessing {
 			int indC = crit_fisher2(Nu2, f[indR]);
 			return f[indR][indC];
 		}
-		private static int crit_fisher2(int Nu2, double[] f) {
+
+        private static int crit_fisher2(int Nu2, double[] f) {
 			double[] lim = new double[34];
 			lim[33] = double.PositiveInfinity;
 			lim[32] = 120;
@@ -2362,14 +3020,172 @@ namespace DataProcessing {
 				DeltaStar[0][i_] = Nnd * (mid_ik - mid_i * mid_k) / ((Nnd - 1) * mqd_i * mqd_k);
 				DeltaStar[i_ + 1][dim - 1] = DeltaStar[0][i_];
 			}*/
-			MessageBox.Show(Matrix.DetCount(DeltaStar) + " " + Matrix.DetCount(Delta));
+			//MessageBox.Show(Matrix.DetCount(DeltaStar) + " " + Matrix.DetCount(Delta));
 			double manycor = Math.Sqrt(Math.Abs(1 - Matrix.DetCount(DeltaStar) / Matrix.DetCount(Delta)));
 			return manycor;
 		}
-		#endregion
 
-		#region Критерии
-		private void tTestMenuItem_Click(object sender, EventArgs e) {
+        public static double Euclide(double[] a, double[] b) {
+            double sum = 0;
+            for (int i = 0; i < a.Length; i++) {
+                sum += Math.Pow(a[i] - b[i], 2);
+            }
+            sum = Math.Sqrt(sum);
+            return sum;
+        }
+        public static double EuclideWeight(double[] a, double[] b) {
+            double sum = 0;
+            for (int i = 0; i < a.Length; i++) {
+                sum += set.euclWeight[i] * Math.Pow(a[i] - b[i], 2);
+            }
+            sum = Math.Sqrt(sum);
+            return sum;
+        }
+
+        public static double Manhattan(double[] a, double[] b) {
+            double sum = 0;
+            for (int i = 0; i < a.Length; i++) {
+                sum += Math.Abs(a[i] - b[i]);
+            }
+            return sum;
+        }
+
+        public static double Chebyshev(double[] a, double[] b) {
+            double max = double.MinValue;
+            for (int i = 0; i < a.Length; i++) {
+                double t = Math.Abs(a[i] - b[i]);
+                if (t > max)
+                    max = t;
+            }
+            return max;
+        }
+
+        public static double Minkovsky(double[] a, double[] b) {
+            double sum = 0;
+            for (int i = 0; i < a.Length; i++) {
+                sum += Math.Pow(Math.Abs(a[i] - b[i]), set.dist_m);
+            }
+            sum = Math.Pow(sum, 1.0/set.dist_m);
+            return sum;
+        }
+
+        public static double Mahalanobis(double[] a, double[] b) {
+            double[][] V = new double[dim][];
+            for(int k = 0; k < dim; k++) {
+                V[k] = new double[dim];
+                for (int p = 0; p < dim; p++) {
+                    double sum = 0;
+                    for(int i = 0; i < Nnd; i++) {
+                        sum += (arr[k][i] - evnd.MID[k]) * (arr[p][i] - evnd.MID[p]);
+                    }
+                    V[k][p] = sum;
+                }
+            }
+            double[][] A = new double[][] { a }, B = new double[][] { b };
+            Matrix.MultiplyNumber(B, -1);
+            double[][] M = Matrix.Add(A, B), MT = Matrix.Transposition(M), res = Matrix.Multiply(M, Matrix.Multiply(V, MT));
+            return res[0][0];
+        }
+
+        public static double NearNeighbor(List<double[]> a, List<double[]> b) {
+            double min = double.MaxValue;
+            foreach(double[] a_item in a) {
+                foreach(double[] b_item in b) {
+                    double d = set.distF(a_item, b_item);
+                    if (d < min)
+                        min = d;
+                }
+            }
+            return min;
+        }
+
+        public static double FarNeighbor(List<double[]> a, List<double[]> b) {
+            double max = double.MinValue;
+            foreach (double[] a_item in a) {
+                foreach (double[] b_item in b) {
+                    double d = set.distF(a_item, b_item);
+                    if (d > max)
+                        max = d;
+                }
+            }
+            return max;
+        }
+
+        public static double MidWeight(List<double[]> a, List<double[]> b) {
+            double sum = 0;
+            foreach (double[] a_item in a) {
+                foreach (double[] b_item in b) {
+                    sum += set.distF(a_item, b_item);
+                }
+            }
+            sum /= (a.Count * b.Count);
+            return sum;
+        }
+
+        public static double MidNonWeight(List<double[]> a, List<double[]> b) {
+            double sum = 0;
+            foreach (double[] a_item in a) {
+                foreach (double[] b_item in b) {
+                    sum += set.distF(a_item, b_item);
+                }
+            }
+            sum /= 4;
+            return sum;
+        }
+
+        public static double Median(List<double[]> a, List<double[]> b) {
+            double[] Me1 = new double[dim], Me2 = new double[dim];
+            for(int i = 0; i < dim; i++) {
+                if(a.Count % 2 == 1) {
+                    Me1[i] = a[(a.Count + 1) / 2][i];
+                }
+                else {
+                    Me1[i] = (a[a.Count / 2][i] + a[a.Count / 2 + 1][i]) / 2;
+                }
+                if (b.Count % 2 == 1) {
+                    Me2[i] = b[(b.Count + 1) / 2][i];
+                }
+                else {
+                    Me2[i] = (b[b.Count / 2][i] + b[b.Count / 2 + 1][i]) / 2;
+                }
+            }
+            double dist = set.distF(Me1, Me2) / 2;
+            return dist;
+        }
+
+        public static double Center(List<double[]> a, List<double[]> b) {
+            double[] X1 = new double[dim], X2 = new double[dim];
+            for (int i = 0; i < dim; i++) {
+                double sum1 = 0, sum2 = 0;
+                for (int j = 0; j < a.Count; j++)
+                    sum1 += a[j][i];
+                for (int j = 0; j < b.Count; j++)
+                    sum2 += b[j][i];
+                X1[i] = sum1 / a.Count;
+                X2[i] = sum2 / b.Count;
+            }
+            double dist = set.distF(X1, X2);
+            return dist;
+        }
+
+        public static double Word(List<double[]> a, List<double[]> b) {
+            double[] X1 = new double[dim], X2 = new double[dim];
+            for (int i = 0; i < dim; i++) {
+                double sum1 = 0, sum2 = 0;
+                for (int j = 0; j < a.Count; j++)
+                    sum1 += a[j][i];
+                for (int j = 0; j < b.Count; j++)
+                    sum2 += b[j][i];
+                X1[i] = sum1 / a.Count;
+                X2[i] = sum2 / b.Count;
+            }
+            double dist = Math.Pow(set.distF(X1, X2), 2) * a.Count * b.Count / (a.Count + b.Count);
+            return dist;
+        }
+        #endregion
+
+        #region Критерии
+        private void tTestMenuItem_Click(object sender, EventArgs e) {
 			if (dist_f != null) {
 				bool res = false;
 				double crit = crit_ttest(N - 1);

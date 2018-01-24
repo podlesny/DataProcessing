@@ -66,7 +66,13 @@ namespace DataProcessing {
 						return;
 					}
 				}
-				if (m_t.Text != "") {
+                if (clastNum_.Text != "") {
+                    set.clustNum = int.Parse(clastNum_.Text);
+                    if (set.clustNum < 0) {
+                        set.clustNum = 3;
+                    }
+                }
+                if (m_t.Text != "") {
 					set.m = double.Parse(m_t.Text.Replace('.', ','));
 				}
 				if (lm_t.Text != "") {
@@ -108,11 +114,116 @@ namespace DataProcessing {
 				if (ct.Text != "") {
 					set.cr = double.Parse(ct.Text.Replace('.', ','));
 				}
-			}
+                if (eps_.Text != "") {
+                    set.factorEps = double.Parse(eps_.Text.Replace('.', ','));
+                }
+                if (clust_eps_.Text != "") {
+                    set.clustEps = double.Parse(clust_eps_.Text.Replace('.', ','));
+                }
+                if (clustIter_.Text != "") {
+                    set.clustIter = int.Parse(clustIter_.Text.Replace('.', ','));
+                }
+                switch (distance.Text) {
+                    case "Евклідова": {
+                            set.distF = new DistF(MainForm.Euclide);
+                        }
+                        break;
+                    case "Зважена Евклідова": {
+                            if(omega_table.Columns.Count == 0) {
+                                set.distF = new DistF(MainForm.Euclide);
+                                return;
+                            }
+                            double[] omega = new double[omega_table.Columns.Count];
+                            for(int i = 0; i < omega_table.Columns.Count; i++) {
+                                double t = 0;
+                                if(!double.TryParse((string)omega_table[i, 0].Value, out t)) {
+                                    set.distF = new DistF(MainForm.Euclide);
+                                    return;
+                                }
+                                omega[i] = t;
+                            }
+                            set.distF = new DistF(MainForm.EuclideWeight);
+                            set.euclWeight = omega;
+                        }
+                        break;
+                    case "Манхетенська": {
+                            set.distF = new DistF(MainForm.Manhattan);
+                        }
+                        break;
+                    case "Чебишева": {
+                            set.distF = new DistF(MainForm.Chebyshev);
+                        }
+                        break;
+                    case "Мінковського": {
+                            int m = 0;
+                            if(!int.TryParse(m_.Text, out m)) {
+                                set.distF = null;
+                                return;
+                            }
+                            set.distF = new DistF(MainForm.Minkovsky);
+                        }
+                        break;
+                    case "Махаланобіса": {
+                            set.distF = new DistF(MainForm.Mahalanobis);
+                        }
+                        break;
+                    default: {
+                            set.distF = new DistF(MainForm.Euclide);
+                        }
+                        break;
+                }
+                switch (cl_dist.Text) {
+                    case "Найближчого сусіда": {
+                            set.cldistF = MainForm.NearNeighbor;
+                        }
+                        break;
+                    case "Найвіддаленішого сусіда": {
+                            set.cldistF = MainForm.FarNeighbor;
+                        }
+                        break;
+                    case "Середня зважена": {
+                            set.cldistF = MainForm.MidWeight;
+                        }
+                        break;
+                    case "Середня незважена": {
+                            set.cldistF = MainForm.MidNonWeight;
+                        }
+                        break;
+                    case "Медіанна": {
+                            set.cldistF = MainForm.Median;
+                        }
+                        break;
+                    case "Між центрами": {
+                            set.cldistF = MainForm.Center;
+                        }
+                        break;
+                    case "Уорда": {
+                            set.cldistF = MainForm.Word;
+                        }
+                        break;
+                    default: {
+                            set.cldistF = MainForm.NearNeighbor;
+                        }
+                        break;
+                }
+            }
 			catch(Exception) {
 				MessageBox.Show("Некоректно введені дані");
 				ok.DialogResult = DialogResult.Cancel;
 			}
 		}
-	}
+
+        private void omega_build_Click(object sender, EventArgs e) {
+            int dim;
+            omega_table.Columns.Clear();
+            omega_table.Rows.Clear();
+            if (!int.TryParse(omega_dim.Text, out dim)) {
+                return;
+            }
+            for(int i = 0; i < dim; i++) {
+                omega_table.Columns.Add(i + "", i + "");
+                omega_table.Columns[i].Width = 40;
+            }
+        }
+    }
 }

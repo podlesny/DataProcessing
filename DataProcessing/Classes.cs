@@ -6,7 +6,11 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace DataProcessing {
-	delegate double NumF(double par);
+    public delegate double NumF(double par);
+
+    public delegate double DistF(double[] a, double[] b);
+
+    public delegate double ClustDistF(List<double[]> a, List<double[]> b);
 
 	public struct EmpirGraphFlags {
 		public bool graph_cl;
@@ -39,6 +43,14 @@ namespace DataProcessing {
 		public double bet;
 		public double ar, br, cr;
 		public int pgrad, Mx, My;
+        public double factorEps;
+        public DistF distF;
+        public ClustDistF cldistF;
+        public double dist_m;
+        public double[] euclWeight;
+        public int clustNum;
+        public int clustIter;
+        public double clustEps;
 		public Settings() {
 			sigLevel = 0.05;
 			alpha = 0.25;
@@ -61,10 +73,17 @@ namespace DataProcessing {
 			ar = 0;
 			br = 0;
 			cr = 1;
+            factorEps = 0.1;
+            distF = MainForm.Euclide;
+            cldistF = MainForm.NearNeighbor;
+            euclWeight = null;
+            clustNum = 3;
+            clustEps = 0.001;
+            clustIter = 100;
 		}
 	}
 
-	public struct GistFlags {
+    public struct GistFlags {
 		public bool gist;
 		public bool f;
 		public GistFlags(bool a, bool b) {
@@ -736,7 +755,119 @@ namespace DataProcessing {
 			}
 			return C;
 		}
+
+		public static void OwnVectors(double[][] coefficients, double[][] solution) {
+			int result = 1;
+			int i, j, k;
+			int maxI = 0, maxJ =0;
+			double max, fi, precision = 0.000001;
+			double[][] matricaPoworota;
+			int numberOfEquation = coefficients.Length;
+			matricaPoworota = new double[numberOfEquation][];
+			for (i = 0; i < numberOfEquation; i++) {
+				matricaPoworota[i] = new double[numberOfEquation];
+			}
+			double[][] temp;
+			temp = new double[numberOfEquation][];
+			for (i = 0; i < numberOfEquation; i++) {
+				temp[i] = new double[numberOfEquation];
+			}
+			double fault = 0.0;
+			for (i = 0; i < numberOfEquation; i++) {
+				for (j = i + 1; j < numberOfEquation; j++) {
+					fault = fault + coefficients[i][j] * coefficients[i][j];
+				}
+			}
+			fault = Math.Sqrt(2 * fault);
+			while (fault > precision) {
+				max = 0.0;
+				for (i = 0; i < numberOfEquation; i++) {
+					for (j = i + 1; j < numberOfEquation; j++) {
+						if (coefficients[i][j] > 0 && coefficients[i][j] > max) {
+							max = coefficients[i][j];
+							maxI = i;
+							maxJ = j;
+						}
+						else if (coefficients[i][j] < 0 && -coefficients[i][j] > max) {
+							max = -coefficients[i][j];
+							maxI = i;
+							maxJ = j;
+						}
+					}
+				}
+				for (i = 0; i < numberOfEquation; i++) {
+					for (j = 0; j < numberOfEquation; j++) {
+						matricaPoworota[i][j] = 0;
+					}
+					matricaPoworota[i][i] = 1;
+				}
+				if (coefficients[maxI][maxI] == coefficients[maxJ][maxJ]) {
+					matricaPoworota[maxI][maxI] = matricaPoworota[maxJ][maxJ] =
+					matricaPoworota[maxJ][maxI] = Math.Sqrt(2.0) / 2.0;
+					matricaPoworota[maxI][maxJ] = -Math.Sqrt(2.0) / 2.0;
+				}
+				else {
+					fi = 0.5 * Math.Atan((2.0 * coefficients[maxI][maxJ]) /
+					(coefficients[maxI][maxI] - coefficients[maxJ][maxJ]));
+					matricaPoworota[maxI][maxI] = matricaPoworota[maxJ][maxJ] = Math.Cos(fi);
+					matricaPoworota[maxI][maxJ] = -Math.Sin(fi);
+					matricaPoworota[maxJ][maxI] = Math.Sin(fi);
+				}
+				for (i = 0; i < numberOfEquation; i++) {
+					for (j = 0; j < numberOfEquation; j++) {
+						temp[i][j] = 0.0;
+					}
+				}
+				for (i = 0; i < numberOfEquation; i++) {
+					for (j = 0; j < numberOfEquation; j++) {
+						for (k = 0; k < numberOfEquation; k++) {
+							temp[i][j] = temp[i][j] + matricaPoworota[k][i] * coefficients[k][j];
+						}
+					}
+				}
+				for (i = 0; i < numberOfEquation; i++) {
+					for (j = 0; j < numberOfEquation; j++) {
+						coefficients[i][j] = 0.0;
+					}
+				}
+				for (i = 0; i < numberOfEquation; i++) {
+					for (j = 0; j < numberOfEquation; j++) {
+						for (k = 0; k < numberOfEquation; k++) {
+							coefficients[i][j] = coefficients[i][j] +
+							temp[i][k] * matricaPoworota[k][j];
+						}
+					}
+				}
+				fault = 0.0;
+				for (i = 0; i < numberOfEquation; i++) {
+					for (j = i + 1; j < numberOfEquation; j++) {
+						fault = fault + coefficients[i][j] * coefficients[i][j];
+					}
+				}
+				fault = Math.Sqrt(2 * fault);
+				for (i = 0; i < numberOfEquation; i++) {
+					for (j = 0; j < numberOfEquation; j++) {
+						temp[i][j] = 0.0;
+					}
+				}
+				for (i = 0; i < numberOfEquation; i++) {
+					for (j = 0; j < numberOfEquation; j++) {
+						for (k = 0; k < numberOfEquation; k++) {
+							temp[i][j] = temp[i][j] + solution[i][k] * matricaPoworota[k][j];
+						}
+					}
+				}
+				for (i = 0; i < numberOfEquation; i++) {
+					for (j = 0; j < numberOfEquation; j++) {
+						solution[i][j] = temp[i][j];
+					}
+				}
+				result++;
+			}
+		}
 	}
+
+   
 
 	public enum Regression {
 		None, Linear, Parabolic, Qlinear

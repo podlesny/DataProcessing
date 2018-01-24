@@ -13,3 +13,5 @@ S:\Maxim\programs\DataProcessing\DataProcessing\obj\Debug\DataProcessing.Generat
 S:\Maxim\programs\DataProcessing\DataProcessing\obj\Debug\DataProcessing.GenerateMultiDimForm.resources
 S:\Maxim\programs\DataProcessing\DataProcessing\obj\Debug\DataProcessing.CheckSelParamForm.resources
 S:\Maxim\programs\DataProcessing\DataProcessing\obj\Debug\DataProcessing.DrawMultiDimForm.resources
+S:\Maxim\programs\DataProcessing\DataProcessing\obj\Debug\DataProcessing.ReduceDimForm.resources
+S:\Maxim\programs\DataProcessing\DataProcessing\obj\Debug\DataProcessing.ClusterVisualizationForm.resources
